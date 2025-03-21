@@ -76,7 +76,7 @@ const maxObstacles = 3; // Maximum obstacles on screen at once
 
 // Enhanced Obstacle creation with better control
 function createObstacle(currentTime) {
-  const height = Math.random() * 1 + 0.5; // Reduced max height for jumpability
+  const height = Math.random() * 0.5; // Reduced max height for jumpability
   const obstacleGroup = new THREE.Group();
   const baseGeometry = new THREE.CylinderGeometry(0.3, 0.3, height, 8);
   const obstacleMaterial = new THREE.MeshLambertMaterial({ color: 0x006400 });
