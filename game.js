@@ -9,29 +9,50 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
-  antialias: true,
-});
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-scene.background = new THREE.Color(0x87ceeb);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+scene.background = new THREE.Color(0xe68a3d); // Deeper desert sunset sky
+scene.fog = new THREE.FogExp2(0xe68a3d, 0.02); // Exponential fog for depth
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+// Lighting (harsh desert sunlight with warm tone)
+const ambientLight = new THREE.AmbientLight(0xffd1a3, 0.4); // Warm ambient
 scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(10, 20, 10);
+const directionalLight = new THREE.DirectionalLight(0xffe6cc, 1.3); // Warm sunlight
+directionalLight.position.set(15, 25, 10);
 directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 1024;
+directionalLight.shadow.mapSize.height = 1024;
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 50;
 scene.add(directionalLight);
 
-// Ground with texture
-const groundTexture = new THREE.TextureLoader().load(
-  "https://threejs.org/examples/textures/terrain/grasslight-big.jpg"
+// Desert ground with dunes
+const textureLoader = new THREE.TextureLoader();
+const groundTexture = textureLoader.load(
+  "https://threejs.org/examples/textures/terrain/sand.jpg"
 );
+const groundNormal = textureLoader.load(
+  "https://threejs.org/examples/textures/terrain/sand-nm.jpg"
+);
+const groundDisplacement = textureLoader.load(
+  "https://threejs.org/examples/textures/terrain/sand-disp.jpg"
+); // Displacement for dunes
 groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+groundNormal.wrapS = groundNormal.wrapT = THREE.RepeatWrapping;
+groundDisplacement.wrapS = groundDisplacement.wrapT = THREE.RepeatWrapping;
 groundTexture.repeat.set(25, 25);
-const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
-const groundMaterial = new THREE.MeshLambertMaterial({ map: groundTexture });
+groundNormal.repeat.set(25, 25);
+groundDisplacement.repeat.set(25, 25);
+const groundGeometry = new THREE.PlaneGeometry(1000, 1000, 64, 64); // Higher resolution for displacement
+const groundMaterial = new THREE.MeshStandardMaterial({
+  map: groundTexture,
+  normalMap: groundNormal,
+  displacementMap: groundDisplacement,
+  displacementScale: 2, // Subtle dune height
+  roughness: 0.9,
+});
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
@@ -42,16 +63,31 @@ const dinoGroup = new THREE.Group();
 const bodyGeometry = new THREE.BoxGeometry(1.5, 1, 0.5);
 const headGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
 const legGeometry = new THREE.BoxGeometry(0.4, 0.8, 0.4);
-const dinoMaterial = new THREE.MeshLambertMaterial({ color: 0x228b22 });
+const tailGeometry = new THREE.ConeGeometry(0.3, 1, 8);
+const eyeGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+const dinoMaterial = new THREE.MeshStandardMaterial({
+  color: 0x8b5a2b,
+  roughness: 0.7,
+}); // Desert-brown
+const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
 const body = new THREE.Mesh(bodyGeometry, dinoMaterial);
 const head = new THREE.Mesh(headGeometry, dinoMaterial);
 const leftLeg = new THREE.Mesh(legGeometry, dinoMaterial);
 const rightLeg = new THREE.Mesh(legGeometry, dinoMaterial);
+const tail = new THREE.Mesh(tailGeometry, dinoMaterial);
+const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
 
 head.position.set(0.75, 0.8, 0);
 leftLeg.position.set(-0.4, 0.2, 0);
 rightLeg.position.set(0.4, 0.2, 0);
-dinoGroup.add(body, head, leftLeg, rightLeg);
+tail.position.set(-0.75, 0.5, 0);
+tail.rotation.z = Math.PI / 2;
+leftEye.position.set(0.85, 0.9, 0.25);
+rightEye.position.set(0.85, 0.9, -0.25);
+
+dinoGroup.add(body, head, leftLeg, rightLeg, tail, leftEye, rightEye);
 dinoGroup.position.set(-5, 0.5, 0);
 dinoGroup.castShadow = true;
 scene.add(dinoGroup);
@@ -67,26 +103,40 @@ let jumpVelocity = 0;
 let gameSpeed = 0.05;
 let score = 0;
 let gameOver = false;
-const gravity = 0.02;
+const gravity = 0.025; // Chrome Dino gravity
+const initialJumpVelocity = 0.45; // Slightly reduced jump
 const obstacles = [];
-const maxJumpHeight = 8;
 let lastObstacleTime = 0;
-const minSpawnGap = 2000; // Minimum time between spawns in milliseconds
-const maxObstacles = 3; // Maximum obstacles on screen at once
+const minSpawnGap = 2000;
+const maxObstacles = 3;
 
-// Enhanced Obstacle creation with better control
+// Enhanced cactus obstacles
 function createObstacle(currentTime) {
-  const height = Math.random() * 0.5; // Reduced max height for jumpability
+  const height = Math.random() * 0.6 + 0.2; // Max height 0.8
   const obstacleGroup = new THREE.Group();
-  const baseGeometry = new THREE.CylinderGeometry(0.3, 0.3, height, 8);
-  const obstacleMaterial = new THREE.MeshLambertMaterial({ color: 0x006400 });
 
-  const base = new THREE.Mesh(baseGeometry, obstacleMaterial);
-  base.position.y = height / 2;
-  base.castShadow = true;
+  // Multi-segment cactus
+  const segmentCount = Math.floor(Math.random() * 2) + 1; // 1-2 segments
+  const segmentHeight = height / segmentCount;
+  const cactusMaterial = new THREE.MeshStandardMaterial({
+    color: 0x355e3b,
+    roughness: 0.8,
+  });
 
-  obstacleGroup.add(base);
-  obstacleGroup.position.set(20, 0, Math.random() * 1 - 0.5); // Reduced Z variation
+  for (let i = 0; i < segmentCount; i++) {
+    const geometry = new THREE.CylinderGeometry(
+      0.2 - i * 0.05,
+      0.3 - i * 0.05,
+      segmentHeight,
+      8
+    );
+    const segment = new THREE.Mesh(geometry, cactusMaterial);
+    segment.position.y = i * segmentHeight + segmentHeight / 2;
+    segment.castShadow = true;
+    obstacleGroup.add(segment);
+  }
+
+  obstacleGroup.position.set(20, 0, Math.random() * 1 - 0.5);
   scene.add(obstacleGroup);
   obstacles.push({ mesh: obstacleGroup, height: height });
 }
@@ -95,7 +145,7 @@ function createObstacle(currentTime) {
 function jump() {
   if (!isJumping && !gameOver) {
     isJumping = true;
-    jumpVelocity = 0.35;
+    jumpVelocity = initialJumpVelocity;
   }
 }
 
@@ -118,7 +168,6 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "Space") jump();
   if (event.code === "ArrowDown") crouch(true);
 });
-
 document.addEventListener("keyup", (event) => {
   if (event.code === "ArrowDown") crouch(false);
 });
@@ -129,21 +178,19 @@ let lastFrameTime = performance.now();
 function animate() {
   requestAnimationFrame(animate);
   const currentTime = performance.now();
-  const deltaTime = currentTime - lastFrameTime;
+  const deltaTime = Math.min(currentTime - lastFrameTime, 100) / 1000; // Cap deltaTime
   lastFrameTime = currentTime;
 
   if (gameOver) return;
 
-  // Jump mechanics
+  // Chrome Dino-style jump
   if (isJumping) {
     dinoGroup.position.y += jumpVelocity;
     jumpVelocity -= gravity;
     if (dinoGroup.position.y <= 0.5) {
       dinoGroup.position.y = 0.5;
       isJumping = false;
-    }
-    if (dinoGroup.position.y > maxJumpHeight) {
-      jumpVelocity = -0.1;
+      jumpVelocity = 0;
     }
   }
 
@@ -151,17 +198,11 @@ function animate() {
   obstacles.forEach((obstacle, index) => {
     obstacle.mesh.position.x -= gameSpeed;
 
-    // Improved collision detection
-    const dinoHeight = isCrouching ? 0.5 : 1;
-    const dinoWidth = 1.5;
+    // Collision detection
+    const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
     const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
 
-    if (
-      obstacle.mesh.position.x < -4 &&
-      obstacle.mesh.position.x > -6 &&
-      Math.abs(obstacle.mesh.position.z - dinoGroup.position.z) < 1 &&
-      dinoGroup.position.y < obstacle.height + 0.2
-    ) {
+    if (dinoBox.intersectsBox(obstacleBox)) {
       gameOver = true;
       alert(`Game Over! Score: ${Math.floor(score)}\nPress OK to restart`);
       restartGame();
@@ -185,8 +226,8 @@ function animate() {
     lastObstacleTime = currentTime;
   }
 
-  // Update game state
-  gameSpeed = Math.min(0.05 + score / 1000, 0.15); // Smoother speed progression
+  // Update game state with faster speed increase
+  gameSpeed = Math.min(0.05 + score / 500, 0.2); // Faster ramp-up, max speed 0.2
   score += gameSpeed * 2;
   scoreElement.textContent = `Score: ${Math.floor(score)}`;
 
@@ -199,7 +240,8 @@ function restartGame() {
   score = 0;
   gameSpeed = 0.05;
   gameOver = false;
-  dinoGroup.position.set(-5, 0.5, 0);
+  dinoGroup.position.y = 0.5;
+  dinoGroup.position.x = -5;
   isJumping = false;
   isCrouching = false;
   dinoGroup.scale.y = 1;
@@ -215,6 +257,6 @@ window.addEventListener("resize", () => {
 
 animate();
 
-// Export functions for external use
+// Export functions
 window.jump = jump;
 window.crouch = crouch;
