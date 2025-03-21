@@ -104,7 +104,6 @@
         font-size: 24px;
         text-shadow: 1px 1px 2px black;
       }
-
       .badge {
         font-family: "system-ui", sans-serif;
         position: fixed;
@@ -120,6 +119,48 @@
         border-top-left-radius: 12px;
         z-index: 10000;
         border: 1px solid #fff;
+      }
+
+      /* Mobile layout adjustments */
+      @media (max-width: 768px) {
+        body {
+          flex-direction: column; /* Stack panels vertically */
+        }
+        #leftPanel {
+          width: 120px; /* Smaller fixed width for video feed */
+          height: 90px; /* Smaller fixed height */
+          position: absolute; /* Position in top-left corner */
+          top: 10px;
+          left: 10px;
+          z-index: 10; /* Ensure it stays above the game panel */
+        }
+        #gamePanel {
+          width: 100%; /* Full width for game */
+          height: 100%; /* Full height for game */
+        }
+        #controlsPanel {
+          flex-direction: column; /* Stack controls and message vertically */
+          height: auto; /* Allow height to adjust */
+          padding: 5px;
+        }
+        #controls {
+          width: 100%; /* Full width for controls */
+          flex-direction: column; /* Stack inputs vertically */
+          gap: 5px;
+        }
+        #controls input {
+          width: 80%; /* Slightly narrower inputs */
+        }
+        #message {
+          width: 100%; /* Full width for message */
+          font-size: 30px; /* Smaller font size for mobile */
+          text-align: center;
+          padding-right: 0;
+        }
+        #startButton {
+          font-size: 16px; /* Smaller button text */
+          padding: 10px 20px; /* Smaller padding */
+        }
       }
     </style>
   </head>
