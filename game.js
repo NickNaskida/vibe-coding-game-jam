@@ -9,6 +9,16 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
+
+// Add Audio Listener
+const listener = new THREE.AudioListener();
+camera.add(listener);
+
+// Audio objects
+const audioLoader = new THREE.AudioLoader();
+const backgroundMusic = new THREE.Audio(listener);
+const jumpSound = new THREE.Audio(listener);
+
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   antialias: true,
@@ -125,6 +135,32 @@ function addDesertDecor() {
   }
 }
 addDesertDecor();
+
+// Load audio files
+audioLoader.load(
+  "https://nicknaskida.github.io/vibe-coding-game-jam/sound/theme.mp3",
+  function (buffer) {
+    backgroundMusic.setBuffer(buffer);
+    backgroundMusic.setLoop(true);
+    backgroundMusic.setVolume(0.5);
+  },
+  undefined,
+  function (error) {
+    console.error("Error loading background music:", error);
+  }
+);
+
+audioLoader.load(
+  "https://nicknaskida.github.io/vibe-coding-game-jam/sound/jump.wav",
+  function (buffer) {
+    jumpSound.setBuffer(buffer);
+    jumpSound.setVolume(0.7);
+  },
+  undefined,
+  function (error) {
+    console.error("Error loading jump sound:", error);
+  }
+);
 
 // Improved Dino
 const dinoGroup = new THREE.Group();
@@ -262,6 +298,9 @@ function jump() {
   if (!isJumping && !gameOver) {
     isJumping = true;
     jumpVelocity = initialJumpVelocity;
+    if (!jumpSound.isPlaying) {
+      jumpSound.play(); // Play jump sound
+    }
   }
 }
 
@@ -399,10 +438,10 @@ function startCountdown(callback) {
       countdownOverlay.textContent = "GO!";
       setTimeout(() => {
         countdownOverlay.style.display = "none";
-        countdownOverlay.textContent = ""; // Clear text
+        countdownOverlay.textContent = "";
         clearInterval(interval);
         callback();
-      }, 500); // Brief "GO!" display
+      }, 500);
     }
   }, 1000);
 }
@@ -416,22 +455,23 @@ function startGame() {
     score = 0;
     gameSpeed = 0.1;
     lastObstacleTime = performance.now();
-    lastFrameTime = performance.now(); // Reset frame time
+    lastFrameTime = performance.now();
+    if (!backgroundMusic.isPlaying) {
+      backgroundMusic.play(); // Start background music
+    }
     animate();
   });
 }
 
-// Restart game (fixed to work on first click)
+// Restart game
 function restartGame() {
-  // Clean up existing obstacles
   obstacles.forEach((o) => scene.remove(o.mesh));
   obstacles.length = 0;
 
-  // Reset game state
   score = 0;
   gameSpeed = 0.1;
   gameOver = false;
-  gameStarted = false; // Ensure game is stopped
+  gameStarted = false;
   dinoGroup.position.set(-50, 0.5, 0);
   dinoGroup.scale.y = 1;
   isJumping = false;
@@ -439,26 +479,24 @@ function restartGame() {
   jumpVelocity = 0;
   lastObstacleTime = performance.now();
 
-  // Hide game over screen
   document.getElementById("gameOverScreen").style.display = "none";
 
-  // Start countdown and then animation
   startCountdown(() => {
     gameStarted = true;
-    lastFrameTime = performance.now(); // Reset frame time
+    lastFrameTime = performance.now();
+    if (!backgroundMusic.isPlaying) {
+      backgroundMusic.play(); // Restart background music
+    }
     animate();
   });
 }
 
 function executeGestureAction() {
   if (gameOver) {
-    // If game is over, restart it
     restartGame();
   } else if (!gameStarted) {
-    // If game hasn't started yet, start it
     startGame();
   }
-  // If game is already running, do nothing
 }
 
 // Show game over
@@ -468,7 +506,8 @@ function showGameOver() {
     "finalScore"
   ).textContent = `Final Score: ${Math.floor(score)}`;
   gameOverScreen.style.display = "flex";
-  gameStarted = false; // Stop the game loop
+  gameStarted = false;
+  backgroundMusic.stop(); // Stop background music
 }
 
 // Event listeners
