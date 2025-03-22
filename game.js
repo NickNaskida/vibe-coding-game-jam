@@ -18,6 +18,7 @@ camera.add(listener);
 const audioLoader = new THREE.AudioLoader();
 const backgroundMusic = new THREE.Audio(listener);
 const jumpSound = new THREE.Audio(listener);
+const coinPickupSound = new THREE.Audio(listener);
 
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -61,7 +62,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Define road and divider dimensions - wider for better visibility
-const roadWidth = 24; // Doubled road width
+const roadWidth = 36; // Doubled road width
 const laneWidth = roadWidth / 3;
 const laneCenters = [-laneWidth, 0, laneWidth];
 
@@ -170,9 +171,21 @@ audioLoader.load(
   }
 );
 
+audioLoader.load(
+  "https://nicknaskida.github.io/vibe-coding-game-jam/sound/coin_pickup.wav",
+  function (buffer) {
+    coinPickupSound.setBuffer(buffer);
+    coinPickupSound.setVolume(0.7);
+  },
+  undefined,
+  function (error) {
+    console.error("Error loading coin pickup sound:", error);
+  }
+);
+
 // Larger dino for better visibility
 const dinoGroup = new THREE.Group();
-const dinoScale = 2.0; // Bigger dino
+const dinoScale = 3.0;
 
 const bodyGeometry = new THREE.BoxGeometry(1.5, 1, 0.5);
 const headGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
@@ -213,20 +226,24 @@ let isCrouching = false;
 let jumpVelocity = 0;
 let gameSpeed = 0.2; // Start a bit faster
 let score = 0;
+let coins = 0;
 let gameStarted = false;
 let gameOver = false;
 const gravity = 0.025;
 const initialJumpVelocity = 0.6;
 const obstacles = [];
+const coinsArray = [];
 let lastObstacleTime = 0;
+let lastCoinTime = 0;
 const minSpawnGap = 1500;
+const minCoinSpawnGap = 2000;
 const moveSpeed = 12; // Faster movement for larger road
 let movingLeft = false;
 let movingRight = false;
 
 function createObstacle() {
   const obstacleGroup = new THREE.Group();
-  const obstacleScale = 2.0; // Scale obstacles to match dino size
+  const obstacleScale = 3.0;
 
   const cactusMaterial = new THREE.MeshStandardMaterial({
     color: 0x355e3b,
@@ -236,7 +253,7 @@ function createObstacle() {
 
   const type = Math.floor(Math.random() * 7);
   const laneSpans = [0.5, 1, 1.5, 2, 2.5, 3];
-  const span =
+  let span =
     laneSpans[
       Math.floor(Math.random() * laneSpans.length * (0.5 + difficulty)) %
         laneSpans.length
@@ -289,13 +306,15 @@ function createObstacle() {
     requiresMove = true;
   }
 
-  // Scale obstacle group to match dino
   obstacleGroup.scale.set(obstacleScale, obstacleScale, obstacleScale);
 
-  const laneIndex = Math.floor(Math.random() * (4 - span));
-  const zPos =
-    laneCenters[Math.floor(laneIndex + span / 2)] -
-    ((span - 1) * laneWidth) / 2;
+  // Improved obstacle positioning with border checking
+  const scaledWidth = width * obstacleScale;
+  const maxZ = (roadWidth - scaledWidth) / 2;
+  const minZ = -maxZ;
+
+  // Random position within bounds
+  let zPos = Math.random() * (maxZ - minZ) + minZ;
 
   obstacleGroup.position.set(dinoGroup.position.x + 120, 0, zPos);
   scene.add(obstacleGroup);
@@ -304,7 +323,56 @@ function createObstacle() {
     requiresJump,
     requiresCrouch,
     requiresMove,
-    width,
+    width: scaledWidth,
+    zPos,
+  });
+}
+
+function createCoin() {
+  const coinGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 32);
+  const coinMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffd700,
+    emissive: 0xdda900,
+    roughness: 0.3,
+    metalness: 0.7,
+  });
+  const coin = new THREE.Mesh(coinGeometry, coinMaterial);
+  coin.rotation.x = Math.PI / 2;
+  coin.castShadow = true;
+
+  let laneIndex;
+  let zPos;
+  let validPosition = false;
+
+  for (let attempts = 0; attempts < 10; attempts++) {
+    laneIndex = Math.floor(Math.random() * 3);
+    zPos = laneCenters[laneIndex];
+    let tooClose = false;
+
+    for (const obstacle of obstacles) {
+      const distance = Math.abs(zPos - obstacle.zPos);
+      if (distance < (obstacle.width * 0.5 + laneWidth) * dinoScale) {
+        tooClose = true;
+        break;
+      }
+    }
+
+    if (!tooClose) {
+      validPosition = true;
+      break;
+    }
+  }
+
+  if (!validPosition) {
+    laneIndex = Math.floor(Math.random() * 3);
+    zPos = laneCenters[laneIndex];
+  }
+
+  coin.position.set(dinoGroup.position.x + 120, 2 * dinoScale * 0.25, zPos);
+  scene.add(coin);
+  coinsArray.push({
+    mesh: coin,
+    rotationSpeed: Math.random() * 0.05 + 0.03,
   });
 }
 
@@ -319,32 +387,52 @@ function jump() {
   }
 }
 
-// Modified crouch function with better position tracking
 function crouch(start = true) {
   if (!gameOver) {
     if (start && !isCrouching) {
       isCrouching = true;
-      dinoGroup.scale.y = dinoScale * 0.5; // Half height but maintain other scaling
-      if (!isJumping) dinoGroup.position.y = dinoScale * 0.25;
+      dinoGroup.scale.y = dinoScale * 0.5;
+      dinoGroup.position.y = dinoScale * 0.25;
     } else if (!start && isCrouching) {
       isCrouching = false;
       dinoGroup.scale.y = dinoScale;
-      if (!isJumping) dinoGroup.position.y = dinoScale * 0.5;
+      dinoGroup.position.y = dinoScale * 0.5;
     }
   }
+}
+
+function startMovingLeft() {
+  if (!gameOver) {
+    movingLeft = true;
+  }
+}
+
+function stopMovingLeft() {
+  movingLeft = false;
+}
+
+function startMovingRight() {
+  if (!gameOver) {
+    movingRight = true;
+  }
+}
+
+function stopMovingRight() {
+  movingRight = false;
 }
 
 // Input handling
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space") jump();
   if (event.code === "ArrowDown") crouch(true);
-  if (event.code === "ArrowLeft") movingLeft = true;
-  if (event.code === "ArrowRight") movingRight = true;
+  if (event.code === "ArrowLeft") startMovingLeft();
+  if (event.code === "ArrowRight") startMovingRight();
 });
+
 document.addEventListener("keyup", (event) => {
   if (event.code === "ArrowDown") crouch(false);
-  if (event.code === "ArrowLeft") movingLeft = false;
-  if (event.code === "ArrowRight") movingRight = false;
+  if (event.code === "ArrowLeft") stopMovingLeft();
+  if (event.code === "ArrowRight") stopMovingRight();
 });
 
 // Game loop
@@ -363,10 +451,8 @@ function animate() {
     return;
   }
 
-  // Dino moves forward
   dinoGroup.position.x += gameSpeed;
 
-  // Update jump
   if (isJumping) {
     dinoGroup.position.y += jumpVelocity;
     jumpVelocity -= gravity;
@@ -378,7 +464,6 @@ function animate() {
     }
   }
 
-  // Smooth lateral movement with road edge collision
   if (movingLeft) dinoGroup.position.z -= moveSpeed * deltaTime;
   if (movingRight) dinoGroup.position.z += moveSpeed * deltaTime;
   const dinoWidth = 0.5 * dinoScale;
@@ -388,64 +473,73 @@ function animate() {
     roadWidth / 2 - dinoWidth
   );
 
-  // Update camera - farther back for better view
   const cameraOffset = new THREE.Vector3(-20, 10, 0);
   const targetPosition = dinoGroup.position.clone().add(cameraOffset);
   camera.position.lerp(targetPosition, 0.1);
   camera.lookAt(dinoGroup.position);
 
-  // Move obstacles
   obstacles.forEach((obstacle, index) => {
     obstacle.mesh.position.x -= gameSpeed;
 
-    // Improved collision detection with crouch consideration
-    const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
-    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
-
-    if (dinoBox.intersectsBox(obstacleBox)) {
-      // When crouching, use a smaller hitbox for vertical collisions
-      if (obstacle.requiresJump && !isJumping) {
-        gameOver = true;
-        return;
-      }
-
-      // When crouching, check if we actually need to hit this obstacle
-      if (obstacle.requiresCrouch) {
-        // If we're crouching, we should pass under it safely
-        // Get the top of dino when crouched
-        const crouchedDinoTop = dinoGroup.position.y + dinoScale * 0.5 * 0.5; // half height when crouched
-
-        // Get bottom of obstacle
-        const obstacleBottom =
-          obstacle.mesh.position.y - obstacle.mesh.scale.y * 0.25; // approximate bottom
-
-        // Only count as collision if dino's top is higher than obstacle bottom
-        if (crouchedDinoTop > obstacleBottom && !isCrouching) {
-          gameOver = true;
-          return;
-        }
-      }
-
-      // Moving obstacles
-      if (
-        obstacle.requiresMove &&
-        Math.abs(dinoGroup.position.z - obstacle.mesh.position.z) <
-          (obstacle.width / 2) * dinoScale
-      ) {
-        gameOver = true;
-        return;
-      }
-    }
-
-    // Clean up obstacles that are far behind
     if (obstacle.mesh.position.x < dinoGroup.position.x - 70) {
       scene.remove(obstacle.mesh);
       obstacles.splice(index, 1);
       score += 10;
+      return;
+    }
+
+    if (!isJumping) {
+      const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
+      const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+
+      if (dinoBox.intersectsBox(obstacleBox)) {
+        if (obstacle.requiresJump && !isJumping) {
+          gameOver = true;
+          return;
+        }
+
+        if (obstacle.requiresCrouch) {
+          const crouchedDinoTop = dinoGroup.position.y + dinoScale * 0.5 * 0.5;
+          const obstacleBottom =
+            obstacle.mesh.position.y - obstacle.mesh.scale.y * 0.25;
+          if (crouchedDinoTop > obstacleBottom && !isCrouching) {
+            gameOver = true;
+            return;
+          }
+        }
+
+        if (
+          obstacle.requiresMove &&
+          Math.abs(dinoGroup.position.z - obstacle.mesh.position.z) <
+            (obstacle.width / 2) * dinoScale
+        ) {
+          gameOver = true;
+          return;
+        }
+      }
     }
   });
 
-  // Obstacle spawning logic - ensure they keep appearing
+  coinsArray.forEach((coin, index) => {
+    coin.mesh.position.x -= gameSpeed;
+    coin.mesh.rotation.z += coin.rotationSpeed; // Fixed rotation
+
+    const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
+    const coinBox = new THREE.Box3().setFromObject(coin.mesh);
+
+    if (dinoBox.intersectsBox(coinBox)) {
+      scene.remove(coin.mesh);
+      coinsArray.splice(index, 1);
+      coins++;
+      if (!coinPickupSound.isPlaying) {
+        coinPickupSound.play();
+      }
+    } else if (coin.mesh.position.x < dinoGroup.position.x - 70) {
+      scene.remove(coin.mesh);
+      coinsArray.splice(index, 1);
+    }
+  });
+
   if (
     currentTime - lastObstacleTime >
     minSpawnGap * (1 - Math.min(score / 5000, 0.7))
@@ -454,10 +548,17 @@ function animate() {
     lastObstacleTime = currentTime;
   }
 
-  // Update game state
+  if (
+    currentTime - lastCoinTime >
+    minCoinSpawnGap * (1 - Math.min(score / 5000, 0.7))
+  ) {
+    createCoin();
+    lastCoinTime = currentTime;
+  }
+
   gameSpeed = Math.min(0.2 + score / 500, 0.4);
   score += gameSpeed * 2;
-  scoreElement.textContent = `Score: ${Math.floor(score)}`;
+  scoreElement.textContent = `Score: ${Math.floor(score)} Coins: ${coins}`;
 
   renderer.render(scene, camera);
 }
@@ -492,8 +593,10 @@ function startGame() {
     gameStarted = true;
     gameOver = false;
     score = 0;
+    coins = 0;
     gameSpeed = 0.2;
     lastObstacleTime = performance.now();
+    lastCoinTime = performance.now();
     lastFrameTime = performance.now();
     if (!backgroundMusic.isPlaying) {
       backgroundMusic.play();
@@ -506,8 +609,11 @@ function startGame() {
 function restartGame() {
   obstacles.forEach((o) => scene.remove(o.mesh));
   obstacles.length = 0;
+  coinsArray.forEach((c) => scene.remove(c.mesh));
+  coinsArray.length = 0;
 
   score = 0;
+  coins = 0;
   gameSpeed = 0.2;
   gameOver = false;
   gameStarted = false;
@@ -517,6 +623,7 @@ function restartGame() {
   isCrouching = false;
   jumpVelocity = 0;
   lastObstacleTime = performance.now();
+  lastCoinTime = performance.now();
 
   document.getElementById("gameOverScreen").style.display = "none";
 
@@ -543,7 +650,7 @@ function showGameOver() {
   const gameOverScreen = document.getElementById("gameOverScreen");
   document.getElementById(
     "finalScore"
-  ).textContent = `Final Score: ${Math.floor(score)}`;
+  ).textContent = `Final Score: ${Math.floor(score)} Coins: ${coins}`;
   gameOverScreen.style.display = "flex";
   gameStarted = false;
   backgroundMusic.stop();
@@ -564,3 +671,7 @@ window.addEventListener("resize", () => {
 window.jump = jump;
 window.crouch = crouch;
 window.executeGestureAction = executeGestureAction;
+window.startMovingLeft = startMovingLeft;
+window.stopMovingLeft = stopMovingLeft;
+window.startMovingRight = startMovingRight;
+window.stopMovingRight = stopMovingRight;
