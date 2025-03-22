@@ -8,6 +8,8 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
     <style>
       body {
         font-family: "Press Start 2P", cursive;
@@ -326,6 +328,10 @@
         #overlayText {
           font-size: 14px;
         }
+        #overlayDescription {
+          font-size: 12px;
+          font-family: "system-ui", sans-serif;
+        }
 
         #countdownOverlay {
           font-size: 60px;
@@ -400,13 +406,28 @@
           Use your body to control the dino!<br />Jump to avoid obstacles and
           crouch under barriers.
         </p>
+        <p id="overlayText">
+          Raise your hands above your head to start the game.
+        </p>
         <button id="startButton">Start</button>
+        <p
+          id="overlayDescription"
+          class="text-center text-xs text-white font-['system-ui'] w-1/2"
+        >
+          Before starting the game, stand up straight with your body fully in
+          the camera frame. After that wait for a few seconds for automatic
+          calibration. (You can adjust the baseline, jump and crouch thresholds
+          if needed on the left bottom panel).
+        </p>
       </div>
       <div id="countdownOverlay" style="display: none"></div>
       <div id="gameOverScreen" style="display: none">
         <h1>Game Over</h1>
         <p id="finalScore"></p>
         <button id="restartButton">Restart</button>
+        <p id="overlayText">
+          Raise your hands above your head to start the game.
+        </p>
       </div>
     </div>
     <a target="_blank" href="https://jam.pieter.com" class="badge"
@@ -418,6 +439,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
     <script src="tracking.js"></script>
     <script src="game.js"></script>
   </body>

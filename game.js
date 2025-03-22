@@ -28,113 +28,121 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-scene.background = new THREE.Color(0xcc6a2e);
-scene.fog = new THREE.FogExp2(0xcc6a2e, 0.01);
+// Enhanced desert appearance
+scene.background = new THREE.Color(0xffd7a3); // Light desert sky
+scene.fog = new THREE.FogExp2(0xffd7a3, 0.008); // Lighter, more distant fog
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffd1a3, 0.6);
+// Lighting for desert environment
+const ambientLight = new THREE.AmbientLight(0xffd1a3, 0.7);
 scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffe6cc, 1.8);
-directionalLight.position.set(30, 40, 20);
+const directionalLight = new THREE.DirectionalLight(0xffe6cc, 2.0);
+directionalLight.position.set(30, 100, 20);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.mapSize.width = 4096;
+directionalLight.shadow.mapSize.height = 4096;
 directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = 150;
-directionalLight.shadow.camera.left = -75;
-directionalLight.shadow.camera.right = 75;
-directionalLight.shadow.camera.top = 75;
-directionalLight.shadow.camera.bottom = -75;
+directionalLight.shadow.camera.far = 200;
+directionalLight.shadow.camera.left = -100;
+directionalLight.shadow.camera.right = 100;
+directionalLight.shadow.camera.top = 100;
+directionalLight.shadow.camera.bottom = -100;
 scene.add(directionalLight);
 
-// Desert ground
-const groundGeometry = new THREE.PlaneGeometry(2000, 2000, 256, 256);
+// Desert ground with subtle texture
+const groundGeometry = new THREE.PlaneGeometry(3000, 3000, 256, 256);
 const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0xe68a3d,
-  roughness: 0.8,
-  metalness: 0.15,
+  color: 0xe6c088,
+  roughness: 0.9,
+  metalness: 0.1,
 });
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Borders
-const borderWidth = 12;
-const laneWidth = borderWidth / 3;
+// Define road and divider dimensions - wider for better visibility
+const roadWidth = 24; // Doubled road width
+const laneWidth = roadWidth / 3;
 const laneCenters = [-laneWidth, 0, laneWidth];
-const borderGeometry = new THREE.BoxGeometry(2000, 3, 2);
-const borderMaterial = new THREE.MeshStandardMaterial({
-  color: 0x8b4513,
-  roughness: 0.9,
-});
-const leftBorder = new THREE.Mesh(borderGeometry, borderMaterial);
-const rightBorder = new THREE.Mesh(borderGeometry, borderMaterial);
-leftBorder.position.set(0, 1.5, -borderWidth / 2 - 1);
-rightBorder.position.set(0, 1.5, borderWidth / 2 + 1);
-leftBorder.castShadow = true;
-rightBorder.castShadow = true;
-scene.add(leftBorder, rightBorder);
 
-// Lane markers
-const laneGeometry = new THREE.PlaneGeometry(2000, 0.6);
-const laneMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffff00,
+// Create roads - larger and more visible
+const roadGeometry = new THREE.PlaneGeometry(3000, roadWidth);
+const roadMaterial = new THREE.MeshStandardMaterial({
+  color: 0xad8a56, // Sand-colored road
+  roughness: 0.7,
+});
+const road = new THREE.Mesh(roadGeometry, roadMaterial);
+road.rotation.x = -Math.PI / 2;
+road.position.y = 0.05;
+scene.add(road);
+
+// Lane dividers - more visible
+const dividerGeometry = new THREE.PlaneGeometry(3000, 0.8);
+const dividerMaterial = new THREE.MeshStandardMaterial({
+  color: 0xf2e6d6, // Light sand color
   transparent: true,
-  opacity: 0.8,
-});
-laneCenters.forEach((z) => {
-  const lane = new THREE.Mesh(laneGeometry, laneMaterial);
-  lane.rotation.x = -Math.PI / 2;
-  lane.position.set(0, 0.03, z);
-  lane.receiveShadow = true;
-  scene.add(lane);
+  opacity: 0.9,
 });
 
-// Desert decor
-function addDesertDecor() {
-  const cactusGeo = new THREE.CylinderGeometry(0.3, 0.5, 2.5, 12);
-  const cactusMat = new THREE.MeshStandardMaterial({
-    color: 0x355e3b,
-    roughness: 0.7,
-  });
-  const rockGeo = new THREE.SphereGeometry(0.7, 20, 20);
-  const rockMat = new THREE.MeshStandardMaterial({
-    color: 0x8b4513,
-    roughness: 0.85,
-  });
-  const tumbleGeo = new THREE.SphereGeometry(0.4, 8, 8);
-  const tumbleMat = new THREE.MeshStandardMaterial({
-    color: 0x8b5a2b,
-    roughness: 0.9,
+// Create two divider lines between the three lanes
+const divider1 = new THREE.Mesh(dividerGeometry, dividerMaterial);
+divider1.rotation.x = -Math.PI / 2;
+divider1.position.set(0, 0.06, -laneWidth / 2);
+scene.add(divider1);
+
+const divider2 = new THREE.Mesh(dividerGeometry, dividerMaterial);
+divider2.rotation.x = -Math.PI / 2;
+divider2.position.set(0, 0.06, laneWidth / 2);
+scene.add(divider2);
+
+// Add desert scenery in the distance
+function addDesertScenery() {
+  // Mountains in the distance
+  const mountainGeometry = new THREE.ConeGeometry(50, 100, 4);
+  const mountainMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc9a769,
+    roughness: 0.95,
   });
 
-  for (let i = 0; i < 30; i++) {
-    const cactus = new THREE.Mesh(cactusGeo, cactusMat);
-    cactus.position.set(
-      Math.random() * 200 - 100,
-      1.25,
-      Math.random() * 20 - 10
+  for (let i = 0; i < 10; i++) {
+    const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
+    const scale = 1 + Math.random() * 1.5;
+    mountain.scale.set(scale, scale * (0.7 + Math.random() * 0.6), scale);
+    mountain.rotation.y = Math.random() * Math.PI;
+    mountain.position.set(
+      Math.random() * 1000 - 500,
+      -20 + Math.random() * 10,
+      Math.random() * 500 - 700
     );
-    cactus.castShadow = true;
-    scene.add(cactus);
-
-    const rock = new THREE.Mesh(rockGeo, rockMat);
-    rock.position.set(Math.random() * 200 - 100, 0.35, Math.random() * 20 - 10);
-    rock.castShadow = true;
-    scene.add(rock);
-
-    const tumble = new THREE.Mesh(tumbleGeo, tumbleMat);
-    tumble.position.set(
-      Math.random() * 200 - 100,
-      0.2,
-      Math.random() * 20 - 10
-    );
-    tumble.castShadow = true;
-    scene.add(tumble);
+    scene.add(mountain);
   }
+
+  // Add distant cacti
+  const cactiPositions = [];
+  for (let i = 0; i < 40; i++) {
+    const x = Math.random() * 600 - 300;
+    const z = Math.random() * 600 - 400;
+
+    // Don't place cacti on the road
+    if (Math.abs(z) > roadWidth) {
+      cactiPositions.push({ x, z });
+    }
+  }
+
+  cactiPositions.forEach((pos) => {
+    const cactusHeight = 10 + Math.random() * 15;
+    const cactusGeo = new THREE.CylinderGeometry(2, 3, cactusHeight, 8);
+    const cactusMat = new THREE.MeshStandardMaterial({
+      color: 0x1b512d,
+      roughness: 0.8,
+    });
+
+    const cactus = new THREE.Mesh(cactusGeo, cactusMat);
+    cactus.position.set(pos.x, cactusHeight / 2 - 5, pos.z);
+    scene.add(cactus);
+  });
 }
-addDesertDecor();
+addDesertScenery();
 
 // Load audio files
 audioLoader.load(
@@ -162,8 +170,10 @@ audioLoader.load(
   }
 );
 
-// Improved Dino
+// Larger dino for better visibility
 const dinoGroup = new THREE.Group();
+const dinoScale = 2.0; // Bigger dino
+
 const bodyGeometry = new THREE.BoxGeometry(1.5, 1, 0.5);
 const headGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
 const legGeometry = new THREE.BoxGeometry(0.4, 0.8, 0.4);
@@ -192,7 +202,8 @@ leftEye.position.set(0.85, 0.9, 0.25);
 rightEye.position.set(0.85, 0.9, -0.25);
 
 dinoGroup.add(body, head, leftLeg, rightLeg, tail, leftEye, rightEye);
-dinoGroup.position.set(-50, 0.5, 0);
+dinoGroup.scale.set(dinoScale, dinoScale, dinoScale);
+dinoGroup.position.set(-50, 1, 0);
 dinoGroup.castShadow = true;
 scene.add(dinoGroup);
 
@@ -200,7 +211,7 @@ scene.add(dinoGroup);
 let isJumping = false;
 let isCrouching = false;
 let jumpVelocity = 0;
-let gameSpeed = 0.1;
+let gameSpeed = 0.2; // Start a bit faster
 let score = 0;
 let gameStarted = false;
 let gameOver = false;
@@ -209,14 +220,14 @@ const initialJumpVelocity = 0.6;
 const obstacles = [];
 let lastObstacleTime = 0;
 const minSpawnGap = 1500;
-const maxObstacles = 4;
-const moveSpeed = 8;
+const moveSpeed = 12; // Faster movement for larger road
 let movingLeft = false;
 let movingRight = false;
 
-// Obstacle creation
-function createObstacle(currentTime) {
+function createObstacle() {
   const obstacleGroup = new THREE.Group();
+  const obstacleScale = 2.0; // Scale obstacles to match dino size
+
   const cactusMaterial = new THREE.MeshStandardMaterial({
     color: 0x355e3b,
     roughness: 0.8,
@@ -278,11 +289,15 @@ function createObstacle(currentTime) {
     requiresMove = true;
   }
 
+  // Scale obstacle group to match dino
+  obstacleGroup.scale.set(obstacleScale, obstacleScale, obstacleScale);
+
   const laneIndex = Math.floor(Math.random() * (4 - span));
   const zPos =
     laneCenters[Math.floor(laneIndex + span / 2)] -
     ((span - 1) * laneWidth) / 2;
-  obstacleGroup.position.set(100, 0, zPos);
+
+  obstacleGroup.position.set(dinoGroup.position.x + 120, 0, zPos);
   scene.add(obstacleGroup);
   obstacles.push({
     mesh: obstacleGroup,
@@ -299,21 +314,22 @@ function jump() {
     isJumping = true;
     jumpVelocity = initialJumpVelocity;
     if (!jumpSound.isPlaying) {
-      jumpSound.play(); // Play jump sound
+      jumpSound.play();
     }
   }
 }
 
+// Modified crouch function with better position tracking
 function crouch(start = true) {
   if (!gameOver) {
     if (start && !isCrouching) {
       isCrouching = true;
-      dinoGroup.scale.y = 0.5;
-      if (!isJumping) dinoGroup.position.y = 0.25;
+      dinoGroup.scale.y = dinoScale * 0.5; // Half height but maintain other scaling
+      if (!isJumping) dinoGroup.position.y = dinoScale * 0.25;
     } else if (!start && isCrouching) {
       isCrouching = false;
-      dinoGroup.scale.y = 1;
-      if (!isJumping) dinoGroup.position.y = 0.5;
+      dinoGroup.scale.y = dinoScale;
+      if (!isJumping) dinoGroup.position.y = dinoScale * 0.5;
     }
   }
 }
@@ -354,7 +370,7 @@ function animate() {
   if (isJumping) {
     dinoGroup.position.y += jumpVelocity;
     jumpVelocity -= gravity;
-    const baseY = isCrouching ? 0.25 : 0.5;
+    const baseY = isCrouching ? dinoScale * 0.25 : dinoScale * 0.5;
     if (dinoGroup.position.y <= baseY) {
       dinoGroup.position.y = baseY;
       isJumping = false;
@@ -362,18 +378,18 @@ function animate() {
     }
   }
 
-  // Smooth lateral movement with inner border collision
+  // Smooth lateral movement with road edge collision
   if (movingLeft) dinoGroup.position.z -= moveSpeed * deltaTime;
   if (movingRight) dinoGroup.position.z += moveSpeed * deltaTime;
-  const dinoWidth = 0.5;
+  const dinoWidth = 0.5 * dinoScale;
   dinoGroup.position.z = THREE.MathUtils.clamp(
     dinoGroup.position.z,
-    -borderWidth / 2 + dinoWidth,
-    borderWidth / 2 - dinoWidth
+    -roadWidth / 2 + dinoWidth,
+    roadWidth / 2 - dinoWidth
   );
 
-  // Update camera
-  const cameraOffset = new THREE.Vector3(-15, 7, 0);
+  // Update camera - farther back for better view
+  const cameraOffset = new THREE.Vector3(-20, 10, 0);
   const targetPosition = dinoGroup.position.clone().add(cameraOffset);
   camera.position.lerp(targetPosition, 0.1);
   camera.lookAt(dinoGroup.position);
@@ -382,41 +398,64 @@ function animate() {
   obstacles.forEach((obstacle, index) => {
     obstacle.mesh.position.x -= gameSpeed;
 
-    // Collision detection
+    // Improved collision detection with crouch consideration
     const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
     const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+
     if (dinoBox.intersectsBox(obstacleBox)) {
+      // When crouching, use a smaller hitbox for vertical collisions
+      if (obstacle.requiresJump && !isJumping) {
+        gameOver = true;
+        return;
+      }
+
+      // When crouching, check if we actually need to hit this obstacle
+      if (obstacle.requiresCrouch) {
+        // If we're crouching, we should pass under it safely
+        // Get the top of dino when crouched
+        const crouchedDinoTop = dinoGroup.position.y + dinoScale * 0.5 * 0.5; // half height when crouched
+
+        // Get bottom of obstacle
+        const obstacleBottom =
+          obstacle.mesh.position.y - obstacle.mesh.scale.y * 0.25; // approximate bottom
+
+        // Only count as collision if dino's top is higher than obstacle bottom
+        if (crouchedDinoTop > obstacleBottom && !isCrouching) {
+          gameOver = true;
+          return;
+        }
+      }
+
+      // Moving obstacles
       if (
-        (obstacle.requiresJump && !isJumping) ||
-        (obstacle.requiresCrouch && !isCrouching) ||
-        (obstacle.requiresMove &&
-          Math.abs(dinoGroup.position.z - obstacle.mesh.position.z) <
-            obstacle.width / 2)
+        obstacle.requiresMove &&
+        Math.abs(dinoGroup.position.z - obstacle.mesh.position.z) <
+          (obstacle.width / 2) * dinoScale
       ) {
         gameOver = true;
         return;
       }
     }
 
-    if (obstacle.mesh.position.x < dinoGroup.position.x - 50) {
+    // Clean up obstacles that are far behind
+    if (obstacle.mesh.position.x < dinoGroup.position.x - 70) {
       scene.remove(obstacle.mesh);
       obstacles.splice(index, 1);
       score += 10;
     }
   });
 
-  // Controlled obstacle spawning
+  // Obstacle spawning logic - ensure they keep appearing
   if (
-    currentTime - lastObstacleTime > minSpawnGap * (1 - score / 2000) &&
-    obstacles.length < maxObstacles &&
-    obstacles.every((obs) => obs.mesh.position.x < dinoGroup.position.x + 80)
+    currentTime - lastObstacleTime >
+    minSpawnGap * (1 - Math.min(score / 5000, 0.7))
   ) {
-    createObstacle(currentTime);
+    createObstacle();
     lastObstacleTime = currentTime;
   }
 
   // Update game state
-  gameSpeed = Math.min(0.1 + score / 500, 0.3);
+  gameSpeed = Math.min(0.2 + score / 500, 0.4);
   score += gameSpeed * 2;
   scoreElement.textContent = `Score: ${Math.floor(score)}`;
 
@@ -453,11 +492,11 @@ function startGame() {
     gameStarted = true;
     gameOver = false;
     score = 0;
-    gameSpeed = 0.1;
+    gameSpeed = 0.2;
     lastObstacleTime = performance.now();
     lastFrameTime = performance.now();
     if (!backgroundMusic.isPlaying) {
-      backgroundMusic.play(); // Start background music
+      backgroundMusic.play();
     }
     animate();
   });
@@ -469,11 +508,11 @@ function restartGame() {
   obstacles.length = 0;
 
   score = 0;
-  gameSpeed = 0.1;
+  gameSpeed = 0.2;
   gameOver = false;
   gameStarted = false;
-  dinoGroup.position.set(-50, 0.5, 0);
-  dinoGroup.scale.y = 1;
+  dinoGroup.position.set(-50, dinoScale * 0.5, 0);
+  dinoGroup.scale.set(dinoScale, dinoScale, dinoScale);
   isJumping = false;
   isCrouching = false;
   jumpVelocity = 0;
@@ -485,7 +524,7 @@ function restartGame() {
     gameStarted = true;
     lastFrameTime = performance.now();
     if (!backgroundMusic.isPlaying) {
-      backgroundMusic.play(); // Restart background music
+      backgroundMusic.play();
     }
     animate();
   });
@@ -507,7 +546,7 @@ function showGameOver() {
   ).textContent = `Final Score: ${Math.floor(score)}`;
   gameOverScreen.style.display = "flex";
   gameStarted = false;
-  backgroundMusic.stop(); // Stop background music
+  backgroundMusic.stop();
 }
 
 // Event listeners
