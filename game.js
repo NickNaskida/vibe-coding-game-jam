@@ -30,8 +30,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // Enhanced desert appearance
-scene.background = new THREE.Color(0xffd7a3); // Light desert sky
-scene.fog = new THREE.FogExp2(0xffd7a3, 0.008); // Lighter, more distant fog
+scene.background = new THREE.Color(0xffd7a3);
+scene.fog = new THREE.FogExp2(0xffd7a3, 0.008);
 
 // Lighting for desert environment
 const ambientLight = new THREE.AmbientLight(0xffd1a3, 0.7);
@@ -61,15 +61,15 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Define road and divider dimensions - wider for better visibility
-const roadWidth = 36; // Doubled road width
+// Define road and divider dimensions
+const roadWidth = 36;
 const laneWidth = roadWidth / 3;
 const laneCenters = [-laneWidth, 0, laneWidth];
 
-// Create roads - larger and more visible
+// Create roads
 const roadGeometry = new THREE.PlaneGeometry(3000, roadWidth);
 const roadMaterial = new THREE.MeshStandardMaterial({
-  color: 0xad8a56, // Sand-colored road
+  color: 0xad8a56,
   roughness: 0.7,
 });
 const road = new THREE.Mesh(roadGeometry, roadMaterial);
@@ -77,15 +77,14 @@ road.rotation.x = -Math.PI / 2;
 road.position.y = 0.05;
 scene.add(road);
 
-// Lane dividers - more visible
+// Lane dividers
 const dividerGeometry = new THREE.PlaneGeometry(3000, 0.8);
 const dividerMaterial = new THREE.MeshStandardMaterial({
-  color: 0xf2e6d6, // Light sand color
+  color: 0xf2e6d6,
   transparent: true,
   opacity: 0.9,
 });
 
-// Create two divider lines between the three lanes
 const divider1 = new THREE.Mesh(dividerGeometry, dividerMaterial);
 divider1.rotation.x = -Math.PI / 2;
 divider1.position.set(0, 0.06, -laneWidth / 2);
@@ -96,9 +95,84 @@ divider2.rotation.x = -Math.PI / 2;
 divider2.position.set(0, 0.06, laneWidth / 2);
 scene.add(divider2);
 
-// Add desert scenery in the distance
+// Road borders
+const borderWidth = 1.2;
+const borderHeight = 6;
+const leftBorderGeo = new THREE.BoxGeometry(3000, borderHeight, borderWidth);
+const rightBorderGeo = new THREE.BoxGeometry(3000, borderHeight, borderWidth);
+const borderMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe6c088,
+  roughness: 0.9,
+  metalness: 0.1,
+  bumpScale: 0.02,
+});
+
+const leftBorder = new THREE.Mesh(leftBorderGeo, borderMaterial);
+leftBorder.position.set(
+  0,
+  borderHeight / 2 - 3,
+  -roadWidth / 2 - borderWidth / 2
+);
+leftBorder.castShadow = true;
+leftBorder.receiveShadow = true;
+scene.add(leftBorder);
+
+const rightBorder = new THREE.Mesh(rightBorderGeo, borderMaterial);
+rightBorder.position.set(
+  0,
+  borderHeight / 2 - 3,
+  roadWidth / 2 + borderWidth / 2
+);
+rightBorder.castShadow = true;
+rightBorder.receiveShadow = true;
+scene.add(rightBorder);
+
+// Add sand dunes
+function addSandDunes() {
+  const duneCount = 40;
+  const duneGeometry = new THREE.ConeGeometry(3, 2, 5);
+  const duneMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf2e6d6,
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+
+  for (let i = 0; i < duneCount; i++) {
+    const leftDune = new THREE.Mesh(duneGeometry, duneMaterial);
+    leftDune.position.set(
+      (Math.random() - 0.5) * 200,
+      -2.5 + Math.random() * 0.5,
+      -roadWidth / 2 - borderWidth - 2 - Math.random() * 5
+    );
+    leftDune.rotation.x = Math.PI / 2;
+    leftDune.rotation.z = Math.random() * Math.PI;
+    leftDune.scale.set(
+      0.7 + Math.random() * 0.6,
+      0.7 + Math.random() * 0.6,
+      0.4 + Math.random() * 0.3
+    );
+    scene.add(leftDune);
+
+    const rightDune = new THREE.Mesh(duneGeometry, duneMaterial);
+    rightDune.position.set(
+      (Math.random() - 0.5) * 200,
+      -2.5 + Math.random() * 0.5,
+      roadWidth / 2 + borderWidth + 2 + Math.random() * 5
+    );
+    rightDune.rotation.x = Math.PI / 2;
+    rightDune.rotation.z = Math.random() * Math.PI;
+    rightDune.scale.set(
+      0.7 + Math.random() * 0.6,
+      0.7 + Math.random() * 0.6,
+      0.4 + Math.random() * 0.3
+    );
+    scene.add(rightDune);
+  }
+}
+addSandDunes();
+
+// Add desert scenery
 function addDesertScenery() {
-  // Mountains in the distance
   const mountainGeometry = new THREE.ConeGeometry(50, 100, 4);
   const mountainMaterial = new THREE.MeshStandardMaterial({
     color: 0xc9a769,
@@ -118,13 +192,10 @@ function addDesertScenery() {
     scene.add(mountain);
   }
 
-  // Add distant cacti
   const cactiPositions = [];
   for (let i = 0; i < 40; i++) {
     const x = Math.random() * 600 - 300;
     const z = Math.random() * 600 - 400;
-
-    // Don't place cacti on the road
     if (Math.abs(z) > roadWidth) {
       cactiPositions.push({ x, z });
     }
@@ -152,10 +223,6 @@ audioLoader.load(
     backgroundMusic.setBuffer(buffer);
     backgroundMusic.setLoop(true);
     backgroundMusic.setVolume(0.5);
-  },
-  undefined,
-  function (error) {
-    console.error("Error loading background music:", error);
   }
 );
 
@@ -164,10 +231,6 @@ audioLoader.load(
   function (buffer) {
     jumpSound.setBuffer(buffer);
     jumpSound.setVolume(0.7);
-  },
-  undefined,
-  function (error) {
-    console.error("Error loading jump sound:", error);
   }
 );
 
@@ -176,14 +239,10 @@ audioLoader.load(
   function (buffer) {
     coinPickupSound.setBuffer(buffer);
     coinPickupSound.setVolume(0.7);
-  },
-  undefined,
-  function (error) {
-    console.error("Error loading coin pickup sound:", error);
   }
 );
 
-// Larger dino for better visibility
+// Larger dino
 const dinoGroup = new THREE.Group();
 const dinoScale = 3.0;
 
@@ -224,7 +283,7 @@ scene.add(dinoGroup);
 let isJumping = false;
 let isCrouching = false;
 let jumpVelocity = 0;
-let gameSpeed = 0.2; // Start a bit faster
+let gameSpeed = 0.2;
 let score = 0;
 let coins = 0;
 let gameStarted = false;
@@ -237,9 +296,6 @@ let lastObstacleTime = 0;
 let lastCoinTime = 0;
 const minSpawnGap = 1500;
 const minCoinSpawnGap = 2000;
-const moveSpeed = 12; // Faster movement for larger road
-let movingLeft = false;
-let movingRight = false;
 
 function createObstacle() {
   const obstacleGroup = new THREE.Group();
@@ -252,7 +308,7 @@ function createObstacle() {
   const difficulty = Math.min(score / 1000, 1);
 
   const type = Math.floor(Math.random() * 7);
-  const laneSpans = [0.5, 1, 1.5, 2, 2.5, 3];
+  const laneSpans = [1, 2, 3];
   let span =
     laneSpans[
       Math.floor(Math.random() * laneSpans.length * (0.5 + difficulty)) %
@@ -262,27 +318,30 @@ function createObstacle() {
 
   let requiresJump = false;
   let requiresCrouch = false;
-  let requiresMove = false;
+  let obstacleHeight = 0;
 
   if (type <= 1) {
-    const height = 1.0 + difficulty * 0.6;
+    const maxHeight = 1 + difficulty * 0.4;
+    const height = Math.min(maxHeight, 1.0 + difficulty * 0.3);
     const geometry = new THREE.BoxGeometry(1, height, width);
     const tall = new THREE.Mesh(geometry, cactusMaterial);
     tall.position.y = height / 2;
     tall.castShadow = true;
     obstacleGroup.add(tall);
     requiresJump = true;
-    if (span >= 2) requiresMove = true;
+    obstacleHeight = height;
   } else if (type >= 2 && type <= 3) {
-    const geometry = new THREE.BoxGeometry(1, 0.3, width);
+    const crouchHeight = 0.8;
+    const geometry = new THREE.BoxGeometry(1, crouchHeight, width);
     const low = new THREE.Mesh(geometry, cactusMaterial);
-    low.position.y = 0.65 - difficulty * 0.15;
+    low.position.y = crouchHeight / 2;
     low.castShadow = true;
     obstacleGroup.add(low);
     requiresCrouch = true;
-    if (span >= 2) requiresMove = true;
+    obstacleHeight = crouchHeight;
   } else if (type >= 4 && type <= 5) {
-    const archHeight = 1.5 - difficulty * 0.3;
+    const dinoHeightWhenCrouched = dinoScale * 0.5;
+    const archHeight = dinoHeightWhenCrouched * 1.2;
     const sideGeo = new THREE.BoxGeometry(1, archHeight, 0.5);
     const topGeo = new THREE.BoxGeometry(1, 0.5, width);
     const leftSide = new THREE.Mesh(sideGeo, cactusMaterial);
@@ -296,35 +355,36 @@ function createObstacle() {
     top.castShadow = true;
     obstacleGroup.add(leftSide, rightSide, top);
     requiresCrouch = true;
-    if (span >= 2) requiresMove = true;
-  } else {
-    const geometry = new THREE.BoxGeometry(1, 2 + difficulty, width);
+    obstacleHeight = archHeight + 0.5;
+  } else if (type >= 6 && type <= 7) {
+    const maxWideHeight = 1.5 + difficulty * 0.5;
+    const height = Math.min(maxWideHeight, 2 + difficulty);
+    const geometry = new THREE.BoxGeometry(1, height, width);
     const wide = new THREE.Mesh(geometry, cactusMaterial);
-    wide.position.y = 1 + difficulty / 2;
+    wide.position.y = height / 2;
     wide.castShadow = true;
     obstacleGroup.add(wide);
-    requiresMove = true;
+    requiresJump = true;
+    obstacleHeight = height;
   }
 
   obstacleGroup.scale.set(obstacleScale, obstacleScale, obstacleScale);
-
-  // Improved obstacle positioning with border checking
   const scaledWidth = width * obstacleScale;
-  const maxZ = (roadWidth - scaledWidth) / 2;
+  const borderOffset = 1.2;
+  const maxZ = (roadWidth - scaledWidth) / 2 - borderOffset;
   const minZ = -maxZ;
-
-  // Random position within bounds
   let zPos = Math.random() * (maxZ - minZ) + minZ;
 
   obstacleGroup.position.set(dinoGroup.position.x + 120, 0, zPos);
   scene.add(obstacleGroup);
+
   obstacles.push({
     mesh: obstacleGroup,
     requiresJump,
     requiresCrouch,
-    requiresMove,
     width: scaledWidth,
     zPos,
+    height: obstacleHeight * obstacleScale,
   });
 }
 
@@ -340,33 +400,8 @@ function createCoin() {
   coin.rotation.x = Math.PI / 2;
   coin.castShadow = true;
 
-  let laneIndex;
-  let zPos;
-  let validPosition = false;
-
-  for (let attempts = 0; attempts < 10; attempts++) {
-    laneIndex = Math.floor(Math.random() * 3);
-    zPos = laneCenters[laneIndex];
-    let tooClose = false;
-
-    for (const obstacle of obstacles) {
-      const distance = Math.abs(zPos - obstacle.zPos);
-      if (distance < (obstacle.width * 0.5 + laneWidth) * dinoScale) {
-        tooClose = true;
-        break;
-      }
-    }
-
-    if (!tooClose) {
-      validPosition = true;
-      break;
-    }
-  }
-
-  if (!validPosition) {
-    laneIndex = Math.floor(Math.random() * 3);
-    zPos = laneCenters[laneIndex];
-  }
+  let laneIndex = Math.floor(Math.random() * 3);
+  let zPos = laneCenters[laneIndex];
 
   coin.position.set(dinoGroup.position.x + 120, 2 * dinoScale * 0.25, zPos);
   scene.add(coin);
@@ -401,38 +436,14 @@ function crouch(start = true) {
   }
 }
 
-function startMovingLeft() {
-  if (!gameOver) {
-    movingLeft = true;
-  }
-}
-
-function stopMovingLeft() {
-  movingLeft = false;
-}
-
-function startMovingRight() {
-  if (!gameOver) {
-    movingRight = true;
-  }
-}
-
-function stopMovingRight() {
-  movingRight = false;
-}
-
 // Input handling
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space") jump();
   if (event.code === "ArrowDown") crouch(true);
-  if (event.code === "ArrowLeft") startMovingLeft();
-  if (event.code === "ArrowRight") startMovingRight();
 });
 
 document.addEventListener("keyup", (event) => {
   if (event.code === "ArrowDown") crouch(false);
-  if (event.code === "ArrowLeft") stopMovingLeft();
-  if (event.code === "ArrowRight") stopMovingRight();
 });
 
 // Game loop
@@ -453,6 +464,7 @@ function animate() {
 
   dinoGroup.position.x += gameSpeed;
 
+  // Handle jumping physics
   if (isJumping) {
     dinoGroup.position.y += jumpVelocity;
     jumpVelocity -= gravity;
@@ -464,20 +476,13 @@ function animate() {
     }
   }
 
-  if (movingLeft) dinoGroup.position.z -= moveSpeed * deltaTime;
-  if (movingRight) dinoGroup.position.z += moveSpeed * deltaTime;
-  const dinoWidth = 0.5 * dinoScale;
-  dinoGroup.position.z = THREE.MathUtils.clamp(
-    dinoGroup.position.z,
-    -roadWidth / 2 + dinoWidth,
-    roadWidth / 2 - dinoWidth
-  );
-
+  // Camera follows player
   const cameraOffset = new THREE.Vector3(-20, 10, 0);
   const targetPosition = dinoGroup.position.clone().add(cameraOffset);
   camera.position.lerp(targetPosition, 0.1);
   camera.lookAt(dinoGroup.position);
 
+  // Process obstacles
   obstacles.forEach((obstacle, index) => {
     obstacle.mesh.position.x -= gameSpeed;
 
@@ -488,31 +493,26 @@ function animate() {
       return;
     }
 
-    if (!isJumping) {
-      const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
-      const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
+    // Improved collision detection
+    const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
+    const obstacleBox = new THREE.Box3().setFromObject(obstacle.mesh);
 
-      if (dinoBox.intersectsBox(obstacleBox)) {
-        if (obstacle.requiresJump && !isJumping) {
+    if (dinoBox.intersectsBox(obstacleBox)) {
+      // Handle jump obstacles
+      if (obstacle.requiresJump) {
+        if (!isJumping || dinoGroup.position.y < obstacle.height) {
           gameOver = true;
           return;
         }
+      }
 
-        if (obstacle.requiresCrouch) {
-          const crouchedDinoTop = dinoGroup.position.y + dinoScale * 0.5 * 0.5;
-          const obstacleBottom =
-            obstacle.mesh.position.y - obstacle.mesh.scale.y * 0.25;
-          if (crouchedDinoTop > obstacleBottom && !isCrouching) {
-            gameOver = true;
-            return;
-          }
-        }
+      // Handle crouch obstacles
+      if (obstacle.requiresCrouch) {
+        const dinoHeight = isCrouching ? dinoScale * 0.5 : dinoScale;
+        const dinoTop = dinoGroup.position.y + dinoHeight / 2;
+        const obstacleTop = obstacle.mesh.position.y + obstacle.height;
 
-        if (
-          obstacle.requiresMove &&
-          Math.abs(dinoGroup.position.z - obstacle.mesh.position.z) <
-            (obstacle.width / 2) * dinoScale
-        ) {
+        if (!isCrouching && dinoTop > obstacleTop - dinoScale * 0.2) {
           gameOver = true;
           return;
         }
@@ -520,9 +520,10 @@ function animate() {
     }
   });
 
+  // Process coins
   coinsArray.forEach((coin, index) => {
     coin.mesh.position.x -= gameSpeed;
-    coin.mesh.rotation.z += coin.rotationSpeed; // Fixed rotation
+    coin.mesh.rotation.z += coin.rotationSpeed;
 
     const dinoBox = new THREE.Box3().setFromObject(dinoGroup);
     const coinBox = new THREE.Box3().setFromObject(coin.mesh);
@@ -540,6 +541,7 @@ function animate() {
     }
   });
 
+  // Spawn obstacles and coins
   if (
     currentTime - lastObstacleTime >
     minSpawnGap * (1 - Math.min(score / 5000, 0.7))
@@ -556,6 +558,7 @@ function animate() {
     lastCoinTime = currentTime;
   }
 
+  // Update game speed and score
   gameSpeed = Math.min(0.2 + score / 500, 0.4);
   score += gameSpeed * 2;
   scoreElement.textContent = `Score: ${Math.floor(score)} Coins: ${coins}`;
@@ -671,7 +674,3 @@ window.addEventListener("resize", () => {
 window.jump = jump;
 window.crouch = crouch;
 window.executeGestureAction = executeGestureAction;
-window.startMovingLeft = startMovingLeft;
-window.stopMovingLeft = stopMovingLeft;
-window.startMovingRight = startMovingRight;
-window.stopMovingRight = stopMovingRight;
