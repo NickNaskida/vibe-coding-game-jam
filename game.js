@@ -450,6 +450,17 @@ function restartGame() {
   });
 }
 
+function executeGestureAction() {
+  if (gameOver) {
+    // If game is over, restart it
+    restartGame();
+  } else if (!gameStarted) {
+    // If game hasn't started yet, start it
+    startGame();
+  }
+  // If game is already running, do nothing
+}
+
 // Show game over
 function showGameOver() {
   const gameOverScreen = document.getElementById("gameOverScreen");
@@ -474,3 +485,4 @@ window.addEventListener("resize", () => {
 // Export functions
 window.jump = jump;
 window.crouch = crouch;
+window.executeGestureAction = executeGestureAction;
