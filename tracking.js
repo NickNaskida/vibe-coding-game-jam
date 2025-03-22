@@ -5,7 +5,6 @@ const elements = {
   baselineAdjust: document.getElementById("baselineAdjust"),
   jumpThreshold: document.getElementById("jumpThreshold"),
   crouchThreshold: document.getElementById("crouchThreshold"),
-  startButton: document.getElementById("startButton"),
 };
 const ctx = elements.canvas.getContext("2d");
 
@@ -205,8 +204,8 @@ function drawSkeleton(keypoints) {
 
       // Gradient fill for joints
       const gradient = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, radius);
-      gradient.addColorStop(0, "rgba(255, 0, 0, 0.8)");
-      gradient.addColorStop(1, "rgba(255, 0, 0, 0.2)");
+      gradient.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+      // gradient.addColorStop(1, "rgba(255, 0, 0, 0.2)");
 
       ctx.beginPath();
       ctx.arc(k.x, k.y, radius, 0, 2 * Math.PI);
@@ -615,11 +614,6 @@ if (typeof crouch !== "function") {
 
 async function init() {
   try {
-    elements.startButton.addEventListener("click", () => {
-      resetApp();
-      startCountdown();
-    });
-
     await setupCamera();
     const detector = await loadModel();
 
